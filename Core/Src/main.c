@@ -266,8 +266,8 @@ void Task_Test_DM_Motor(float a, float w, float b)
   // motor_j4340_1.Set_Control_Angle(a * sin((float)Counter / 1000.0f * w + b));
   motor_j4340_1.Set_Control_Omega(0.0f);
   motor_j4340_1.Set_Control_Torque(0.0f);
-  // motor_j4340_1.Set_K_P(3.0f);
-  motor_j4340_1.Set_K_P(5.0f);
+  motor_j4340_1.Set_K_P(3.0f);
+  // motor_j4340_1.Set_K_P(5.0f);
   motor_j4340_1.Set_K_D(0.4f);
   motor_j4340_1.TIM_Send_PeriodElapsedCallback();
 
