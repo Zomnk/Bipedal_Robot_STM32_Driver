@@ -20,11 +20,15 @@
 #include "main.h"
 #include "can.h"
 #include "dma.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <math.h>
+#define ARM_MATH_CM4
+#include "arm_math.h"
 #include "stdlib.h"
 #include "drv_bsp.h"
 #include "dvc_serialplot.h"
@@ -51,7 +55,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+float flag = 0, i = 0, j = 0;
 Class_Serialplot serialplot;
 Class_Motor_DM_Normal motor_j4340_1;
 Class_Motor_DM_Normal motor_j4340_2;
@@ -145,6 +149,21 @@ void UART_Serialplot_Call_Back(uint8_t *Buffer, uint16_t Length)
   }
 }
 
+void UART_Null_CallBack(uint8_t *Buffer, uint16_t Length)
+{
+	
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	if (htim == &htim3)
+	{
+		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
+		serialplot.TIM_Write_PeriodElapsedCallback();
+		TIM_UART_PeriodElapsedCallback();
+	}
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -179,15 +198,19 @@ int main(void)
   MX_DMA_Init();
   MX_CAN1_Init();
   MX_USART1_UART_Init();
-  MX_USART2_UART_Init();
   MX_USART3_UART_Init();
+  MX_USART2_UART_Init();
   MX_USART6_UART_Init();
+  MX_CAN2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   // BSP_Init(BSP_LED_1_ON | BSP_LED_2_ON | BSP_BEEP_ON);
   CAN_Init(&hcan1, CAN_Motor_Call_Back);
   // CAN_Init(&hcan2, CAN_Motor_Call_Back);
   UART_Init(&huart1, UART_Serialplot_Call_Back, SERIALPLOT_RX_VARIABLE_ASSIGNMENT_MAX_LENGTH);
-  serialplot.Init(&huart1, 6, (char **)Variable_Assignment_List);
+  // UART_Init(&huart1, UART_Null_CallBack, UART_BUFFER_SIZE);
+	serialplot.Init(&huart1, 6, (char **)Variable_Assignment_List);
+	HAL_TIM_Base_Start_IT(&htim3);
   // 定义电机结构体
   motor_j4340_1.Init(&hcan1, 0x06, 0x01, Motor_DM_Control_Method_NORMAL_MIT);
   motor_j4340_2.Init(&hcan1, 0x07, 0x02, Motor_DM_Control_Method_NORMAL_MIT);
@@ -201,6 +224,23 @@ int main(void)
   while (1)
   {
     Task_Test_DM_Motor(a, w, b);
+//		for(i = 0; i < 1000; i++)
+//		{
+//			for(j = 0; j < 1000; j++)
+//			{
+//				sin((float)(i + j));
+//			}
+//		} 
+//		flag = 1;
+//		for(i = 0; i < 1000; i++)
+//		{
+//			for(j = 0; j < 1000; j++)
+//			{
+//				arm_sin_f32(i + j);
+//			}
+//		} 
+//		flag = 0;
+		
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -301,11 +341,9 @@ void Task_Test_DM_Motor(float a, float w, float b)
   float k_p = motor_j4340_1.Get_K_P();
   float k_d = motor_j4340_1.Get_K_D();
   serialplot.Set_Data(11, &status, &control_angle, &now_angle, &control_omega, &now_omega, &control_torque, &now_torque, &temperature_mos, &temperature_rotor, &k_p, &k_d);
-  serialplot.TIM_Write_PeriodElapsedCallback();
 
   // 通信设备回调数据
   TIM_CAN_PeriodElapsedCallback();
-  TIM_UART_PeriodElapsedCallback();
 
   // 延时1ms
   HAL_Delay(0);
